@@ -112,12 +112,16 @@ function Invoke-VargaWindowsPower {
     )
     $target = "\\$Computer"
     $arguments = switch ($Action) {
-        'shutdown' { @('/m', $target, '/s', '/t', $DelaySeconds, '/c', '"Spegnimento richiesto da Varga Remote"') }
-        'restart'  { @('/m', $target, '/r', '/t', $DelaySeconds, '/c', '"Riavvio richiesto da Varga Remote"') }
+        'shutdown' { @('/m', $target, '/s', '/t', [string]$DelaySeconds) }
+        'restart'  { @('/m', $target, '/r', '/t', [string]$DelaySeconds) }
         'cancel'   { @('/m', $target, '/a') }
     }
-    $process = Start-Process -FilePath "$env:SystemRoot\System32\shutdown.exe" -ArgumentList $arguments -Wait -PassThru -WindowStyle Hidden
-    if ($process.ExitCode -ne 0) {
-        throw 'Comando rifiutato. Serve la stessa rete/VPN e autorizzazione Windows per lo spegnimento remoto.'
+    $shutdownPath = Join-Path $env:SystemRoot 'System32\shutdown.exe'
+    $commandOutput = @(& $shutdownPath @arguments 2>&1 | ForEach-Object { [string]$_ })
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) {
+        $detail = ($commandOutput -join ' ').Trim()
+        if (-not $detail) { $detail = 'Windows non ha fornito altri dettagli.' }
+        throw "Comando rifiutato (codice ${exitCode}): $detail"
     }
 }

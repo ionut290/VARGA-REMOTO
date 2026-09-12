@@ -52,8 +52,8 @@ try {
             $action = [string]$body.action
             $delay = [Math]::Max(0, [Math]::Min(600, [int]$body.delaySeconds))
             $arguments = switch ($action) {
-                'shutdown' { @('/s', '/t', $delay, '/c', '"Spegnimento richiesto da Varga Remote"') }
-                'restart'  { @('/r', '/t', $delay, '/c', '"Riavvio richiesto da Varga Remote"') }
+                'shutdown' { @('/s', '/t', [string]$delay) }
+                'restart'  { @('/r', '/t', [string]$delay) }
                 'cancel'   { @('/a') }
                 default { $null }
             }
@@ -61,9 +61,13 @@ try {
                 Write-VargaJsonResponse $context 400 @{ ok = $false; error = 'Azione non valida.' }
                 continue
             }
-            $process = Start-Process "$env:SystemRoot\System32\shutdown.exe" -ArgumentList $arguments -PassThru -Wait -WindowStyle Hidden
-            if ($process.ExitCode -ne 0) {
-                Write-VargaJsonResponse $context 500 @{ ok = $false; error = "shutdown.exe: $($process.ExitCode)" }
+            $shutdownPath = Join-Path $env:SystemRoot 'System32\shutdown.exe'
+            $commandOutput = @(& $shutdownPath @arguments 2>&1 | ForEach-Object { [string]$_ })
+            $exitCode = $LASTEXITCODE
+            if ($exitCode -ne 0) {
+                $detail = ($commandOutput -join ' ').Trim()
+                if (-not $detail) { $detail = 'Windows non ha fornito altri dettagli.' }
+                Write-VargaJsonResponse $context 500 @{ ok = $false; error = "shutdown.exe codice ${exitCode}: $detail" }
                 continue
             }
             Write-VargaJsonResponse $context 200 @{ ok = $true; action = $action; delaySeconds = $delay }
