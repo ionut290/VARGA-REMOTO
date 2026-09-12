@@ -1,0 +1,10 @@
+*.log
+*.tmp
+*.bak
+.env
+id_ed25519
+id_ed25519.pub
+devices.json
+install.json
+local-smart-wake.json
+update-state.json

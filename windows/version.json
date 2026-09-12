@@ -1,0 +1,21 @@
+{
+  "app": "Varga Remote",
+  "version": "0.5.0-beta",
+  "versionNumber": "0.5.0",
+  "channel": "beta",
+  "repository": "ionut290/VARGA-REMOTO",
+  "minimumPowerShell": "5.1",
+  "files": [
+    "Common.ps1",
+    "PowerTools.ps1",
+    "SmartWake.ps1",
+    "Update-VargaRemote.ps1",
+    "VargaRemote-Manager.ps1",
+    "VargaRemote-Setup.ps1",
+    "Install-VargaRemote.ps1",
+    "Revoke-VargaRemote.ps1",
+    "Test-VargaRemote.ps1",
+    "router-database.json",
+    "version.json"
+  ]
+}

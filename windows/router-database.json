@@ -1,0 +1,119 @@
+[
+  {
+    "matches": ["FRITZ!Box", "AVM"],
+    "vendor": "AVM",
+    "remoteWake": "router-ui-or-vpn",
+    "vpnPreferred": true,
+    "vpnProtocols": ["WireGuard", "IPsec", "MyFRITZ"],
+    "wakeOnWanSupported": false,
+    "note": "Profilo AVM rilevato. La soluzione consigliata e collegarsi prima alla VPN del FRITZ!Box e poi usare Wake-on-LAN; in alternativa alcuni modelli possono svegliare un dispositivo dal pannello FRITZ!Box."
+  },
+  {
+    "matches": ["ASUS", "ASUSTeK"],
+    "vendor": "ASUS",
+    "remoteWake": "router-ui-or-vpn",
+    "vpnPreferred": true,
+    "vpnProtocols": ["WireGuard", "OpenVPN", "IPsec"],
+    "wakeOnWanSupported": false,
+    "note": "Molti router ASUS includono VPN server e una pagina Wake on LAN. Varga Remote preferisce la VPN e non apre porte UDP automaticamente."
+  },
+  {
+    "matches": ["GL.iNet", "GL-", "GLinet"],
+    "vendor": "GL.iNet",
+    "remoteWake": "vpn-preferred",
+    "vpnPreferred": true,
+    "vpnProtocols": ["WireGuard", "OpenVPN"],
+    "wakeOnWanSupported": false,
+    "note": "Router GL.iNet rilevato: WireGuard/OpenVPN sul router e Wake-on-LAN nella LAN sono la combinazione consigliata."
+  },
+  {
+    "matches": ["OpenWrt", "LuCI"],
+    "vendor": "OpenWrt",
+    "remoteWake": "vpn-preferred",
+    "vpnPreferred": true,
+    "vpnProtocols": ["WireGuard", "OpenVPN"],
+    "wakeOnWanSupported": false,
+    "note": "OpenWrt rilevato. La soluzione preferita e una VPN sul router; il Magic Packet puo poi essere inoltrato nella LAN senza esporre UDP 7/9 a Internet."
+  },
+  {
+    "matches": ["MikroTik", "RouterOS"],
+    "vendor": "MikroTik",
+    "remoteWake": "vpn-preferred",
+    "vpnPreferred": true,
+    "vpnProtocols": ["WireGuard", "IPsec", "OpenVPN"],
+    "wakeOnWanSupported": false,
+    "note": "MikroTik/RouterOS rilevato. Preferire WireGuard/IPsec verso il router e Wake-on-LAN dalla rete remota."
+  },
+  {
+    "matches": ["Keenetic", "ZyXEL Keenetic"],
+    "vendor": "Keenetic",
+    "remoteWake": "vpn-preferred",
+    "vpnPreferred": true,
+    "vpnProtocols": ["WireGuard", "OpenVPN", "IPsec"],
+    "wakeOnWanSupported": false,
+    "note": "Keenetic rilevato. Configurare una VPN sul router e lasciare a Varga Remote la scelta automatica della rotta verso la LAN."
+  },
+  {
+    "matches": ["Ubiquiti", "UniFi", "UDM"],
+    "vendor": "Ubiquiti",
+    "remoteWake": "vpn-preferred",
+    "vpnPreferred": true,
+    "vpnProtocols": ["WireGuard", "Teleport", "VPN"],
+    "wakeOnWanSupported": false,
+    "note": "Gateway UniFi/Ubiquiti rilevato. Preferire una VPN/Teleport verso la rete e poi Wake-on-LAN."
+  },
+  {
+    "matches": ["Synology Router", "Synology"],
+    "vendor": "Synology",
+    "remoteWake": "vpn-preferred",
+    "vpnPreferred": true,
+    "vpnProtocols": ["VPN Plus", "OpenVPN"],
+    "wakeOnWanSupported": false,
+    "note": "Router Synology rilevato. Usare il servizio VPN del router quando disponibile e Wake-on-LAN nella LAN remota."
+  },
+  {
+    "matches": ["TP-Link", "Archer", "Deco"],
+    "vendor": "TP-Link",
+    "remoteWake": "model-dependent",
+    "vpnPreferred": true,
+    "vpnProtocols": ["WireGuard", "OpenVPN"],
+    "wakeOnWanSupported": false,
+    "note": "Compatibilita dipendente dal modello TP-Link. Se il router offre VPN server, e la soluzione preferita; Varga Remote non abilita port forwarding automaticamente."
+  },
+  {
+    "matches": ["NETGEAR", "Nighthawk", "Orbi"],
+    "vendor": "NETGEAR",
+    "remoteWake": "model-dependent",
+    "vpnPreferred": true,
+    "vpnProtocols": ["OpenVPN", "VPN"],
+    "wakeOnWanSupported": false,
+    "note": "Compatibilita NETGEAR variabile. Usare preferibilmente la VPN integrata del router quando presente."
+  },
+  {
+    "matches": ["Vodafone", "Power Station", "Vodafone Station"],
+    "vendor": "Vodafone",
+    "remoteWake": "model-dependent",
+    "vpnPreferred": false,
+    "vpnProtocols": [],
+    "wakeOnWanSupported": false,
+    "note": "Vodafone Station rilevata. Le funzioni VPN/Wake dipendono dal modello e dal firmware; non viene aperta automaticamente alcuna porta."
+  },
+  {
+    "matches": ["TIM HUB", "Technicolor", "Sercomm"],
+    "vendor": "TIM",
+    "remoteWake": "model-dependent",
+    "vpnPreferred": false,
+    "vpnProtocols": [],
+    "wakeOnWanSupported": false,
+    "note": "TIM HUB/modem operatore rilevato. Wake-on-LAN da Internet non e garantito; verificare prima se il modello offre una VPN server o una funzione Wake dedicata."
+  },
+  {
+    "matches": ["Fastweb", "FASTGate", "NeXXt"],
+    "vendor": "Fastweb",
+    "remoteWake": "model-dependent",
+    "vpnPreferred": false,
+    "vpnProtocols": [],
+    "wakeOnWanSupported": false,
+    "note": "Router Fastweb rilevato. Verificare CGNAT e funzioni VPN del modello; evitare l esposizione automatica delle porte UDP 7/9."
+  }
+]
