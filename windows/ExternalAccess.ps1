@@ -35,7 +35,8 @@ function Save-VargaExternalAccessConfig {
         [Parameter(Mandatory)][string]$DeviceId,
         [string]$RelayUrl = '',
         [string]$PowerUrl = '',
-        [Parameter(Mandatory)][string]$Token
+        [Parameter(Mandatory)][string]$Token,
+        [string]$RustDeskPassword = ''
     )
     if (-not $RelayUrl -and -not $PowerUrl) { throw 'Nessun servizio esterno rilevato.' }
     foreach ($value in @($RelayUrl, $PowerUrl) | Where-Object { $_ }) {
@@ -57,6 +58,8 @@ function Save-VargaExternalAccessConfig {
         relayUrl = $RelayUrl.TrimEnd('/')
         powerUrl = $PowerUrl.TrimEnd('/')
         protectedToken = Protect-VargaExternalToken -Token $Token
+        protectedRustDeskPassword = $(if ($RustDeskPassword) { Protect-VargaExternalToken -Token $RustDeskPassword } else { '' })
+        permanent = $true
         updatedAt = (Get-Date).ToString('o')
     }
     @($entries) | ConvertTo-Json -Depth 5 | Set-Content $script:VargaExternalConfigPath -Encoding UTF8
@@ -67,7 +70,8 @@ function ConvertTo-VargaExternalPairingCode {
         [Parameter(Mandatory)][string]$PowerUrl,
         [Parameter(Mandatory)][string]$Token,
         [string]$ComputerName = $env:COMPUTERNAME,
-        [string]$RustDeskId = ''
+        [string]$RustDeskId = '',
+        [string]$RustDeskPassword = ''
     )
     $payload = [PSCustomObject]@{
         version = 2
@@ -75,6 +79,8 @@ function ConvertTo-VargaExternalPairingCode {
         token = $Token
         computerName = $ComputerName
         rustDeskId = $RustDeskId
+        rustDeskPassword = $RustDeskPassword
+        permanent = $true
         createdAt = (Get-Date).ToUniversalTime().ToString('o')
     }
     $bytes = [Text.Encoding]::UTF8.GetBytes(($payload | ConvertTo-Json -Compress))

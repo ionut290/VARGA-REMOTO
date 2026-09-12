@@ -16,7 +16,7 @@ New-Item -Path $dataDir -ItemType Directory -Force | Out-Null
 $databasePath = Join-Path $PSScriptRoot 'router-database.json'
 $manifestPath = Join-Path $PSScriptRoot 'version.json'
 $updateScriptPath = Join-Path $PSScriptRoot 'Update-VargaRemote.ps1'
-$displayVersion = '0.7.5-beta'
+$displayVersion = '0.8.0-beta'
 if (Test-Path $manifestPath) {
     try { $displayVersion = [string](Get-Content $manifestPath -Raw | ConvertFrom-Json).version }
     catch { }
@@ -90,7 +90,7 @@ $updateButton.ForeColor = [Drawing.Color]::White
 $form.Controls.Add($updateButton)
 
 $subtitle = New-Object Windows.Forms.Label
-$subtitle.Text = 'PC autorizzati - nessuna password viene salvata qui'
+$subtitle.Text = 'PC autorizzati - credenziali permanenti protette su questo PC'
 $subtitle.ForeColor = [Drawing.Color]::FromArgb(148, 163, 184)
 $subtitle.Location = New-Object Drawing.Point(28, 60)
 $subtitle.AutoSize = $true
@@ -312,6 +312,18 @@ $connect.Add_Click({
             'Hai selezionato questo stesso PC. Aggiungi ID mostrato sull altro computer.',
             'Collegamento bloccato', 'OK', 'Warning') | Out-Null
         return
+    }
+    if (Get-Command Get-VargaExternalAccessConfig -ErrorAction SilentlyContinue) {
+        $savedAccess = Get-VargaExternalAccessConfig -DeviceId $id
+        $protectedPassword = if ($savedAccess) { [string](Get-VargaObjectValue $savedAccess 'protectedRustDeskPassword' '') } else { '' }
+        if ($protectedPassword) {
+            try {
+                $permanentPassword = Unprotect-VargaExternalToken -ProtectedToken $protectedPassword
+                [Windows.Forms.Clipboard]::SetText($permanentPassword)
+                $statusLabel.Text = 'Password permanente copiata. Se RustDesk la richiede, incollala e scegli Ricorda.'
+            }
+            catch { }
+        }
     }
     Start-Process -FilePath $rustDesk -ArgumentList @('--connect', $id)
 })
@@ -547,7 +559,8 @@ $externalButton.Add_Click({
             [Windows.Forms.Application]::DoEvents()
             $relayUrl = Find-VargaRelay -Token ([string]$payload.token)
             Save-VargaExternalAccessConfig -DeviceId (Get-DeviceValue $device 'id') -RelayUrl $relayUrl `
-                -PowerUrl ([string]$payload.powerUrl) -Token ([string]$payload.token)
+                -PowerUrl ([string]$payload.powerUrl) -Token ([string]$payload.token) `
+                -RustDeskPassword ([string](Get-VargaObjectValue $payload 'rustDeskPassword' ''))
             $dialog.DialogResult = [Windows.Forms.DialogResult]::OK
             $dialog.Close()
             if ($relayUrl) {

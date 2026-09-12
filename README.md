@@ -1,4 +1,4 @@
-# Varga Remote 0.7.5 Configurazione automatica accesso esterno
+# Varga Remote 0.8.0 Accesso permanente e configurazione esterna
 
 Varga Remote e un pannello Windows per controllare PC propri o autorizzati usando
 RustDesk come motore di desktop remoto. La versione 0.6 aggiunge **Accesso

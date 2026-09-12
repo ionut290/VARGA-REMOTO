@@ -47,18 +47,51 @@ New-Item $installRoot -ItemType Directory -Force | Out-Null
 Copy-Item (Join-Path $PSScriptRoot 'VargaRemote-PowerAgent.ps1') $agentPath -Force
 
 $token = $null
+$rustDeskPassword = $null
 if (Test-Path $configPath) {
-    try { $token = [string](Get-Content $configPath -Raw | ConvertFrom-Json).token } catch { }
+    try {
+        $existingConfig = Get-Content $configPath -Raw | ConvertFrom-Json
+        $token = [string]$existingConfig.token
+        $rustDeskPassword = [string]$existingConfig.rustDeskPassword
+    }
+    catch { }
 }
 if (-not $token) {
     $random = New-Object byte[] 32
     [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($random)
     $token = [Convert]::ToBase64String($random)
 }
-[PSCustomObject]@{ port = 47832; token = $token } |
+if (-not $rustDeskPassword) {
+    $passwordBytes = New-Object byte[] 18
+    [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($passwordBytes)
+    $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#_-'
+    $rustDeskPassword = -join ($passwordBytes | ForEach-Object { $alphabet[[int]$_ % $alphabet.Length] })
+}
+[PSCustomObject]@{ port = 47832; token = $token; rustDeskPassword = $rustDeskPassword } |
     ConvertTo-Json | Set-Content $configPath -Encoding UTF8
 
 & icacls.exe $installRoot /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' | Out-Null
+
+# Configura RustDesk per accesso non presidiato e avvio prima del login.
+$rustDesk = if (Get-Command Get-VargaRemoteRustDeskPath -ErrorAction SilentlyContinue) { Get-VargaRemoteRustDeskPath } else { $null }
+if (-not $rustDesk) { throw 'RustDesk non trovato: installalo prima di preparare l accesso permanente.' }
+$rustDeskService = Get-Service -Name 'RustDesk' -ErrorAction SilentlyContinue
+if (-not $rustDeskService) {
+    Start-Process -FilePath $rustDesk -ArgumentList @('--install-service') -Wait | Out-Null
+    Start-Sleep -Seconds 3
+    $rustDeskService = Get-Service -Name 'RustDesk' -ErrorAction SilentlyContinue
+}
+if (-not $rustDeskService) { throw 'Servizio RustDesk non installato.' }
+Set-Service -Name $rustDeskService.Name -StartupType Automatic
+if ($rustDeskService.Status -ne 'Running') { Start-Service -Name $rustDeskService.Name }
+& $rustDesk --password $rustDeskPassword | Out-Null
+if ($LASTEXITCODE -ne 0) { throw 'Impostazione della password permanente RustDesk non riuscita.' }
+
+$tailscaleService = Get-Service -Name 'Tailscale' -ErrorAction SilentlyContinue
+if ($tailscaleService) {
+    Set-Service -Name $tailscaleService.Name -StartupType Automatic
+    if ($tailscaleService.Status -ne 'Running') { Start-Service -Name $tailscaleService.Name }
+}
 
 $taskName = 'Varga Remote Power Agent'
 $taskCommand = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$agentPath`""
@@ -86,6 +119,8 @@ $payload = [PSCustomObject]@{
     token = $token
     computerName = $env:COMPUTERNAME
     rustDeskId = ''
+    rustDeskPassword = $rustDeskPassword
+    permanent = $true
     createdAt = (Get-Date).ToUniversalTime().ToString('o')
 }
 if (Get-Command Get-VargaRemoteRustDeskPath -ErrorAction SilentlyContinue) {
