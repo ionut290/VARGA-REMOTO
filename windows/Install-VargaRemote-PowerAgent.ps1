@@ -54,3 +54,14 @@ Write-Host 'AGENTE INSTALLATO' -ForegroundColor Green
 Write-Host "Indirizzo Power Agent: http://${tailIp}:47832"
 Write-Host "Token: $token"
 Write-Host 'Conserva il token in modo sicuro: serve sul PC di controllo.' -ForegroundColor Yellow
+$accessData = @(
+    "Indirizzo Power Agent: http://${tailIp}:47832",
+    "Token: $token"
+) -join [Environment]::NewLine
+try {
+    Set-Clipboard -Value $accessData
+    Write-Host 'Indirizzo e token copiati negli appunti.' -ForegroundColor Cyan
+}
+catch { }
+Write-Host ''
+[void](Read-Host 'Premi INVIO soltanto dopo aver copiato i dati')

@@ -1,4 +1,4 @@
-# Varga Remote 0.6.0 Accesso esterno + Smart Wake
+# Varga Remote 0.6.1 Accesso esterno + Smart Wake
 
 Varga Remote e un pannello Windows per controllare PC propri o autorizzati usando
 RustDesk come motore di desktop remoto. La versione 0.6 aggiunge **Accesso
