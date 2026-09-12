@@ -1,6 +1,6 @@
 #requires -Version 5.1
 [CmdletBinding()]
-param([switch]$Automatic)
+param([switch]$Automatic, [switch]$RefreshOnly)
 
 $ErrorActionPreference = 'Stop'
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -67,6 +67,11 @@ Get-NetFirewallRule -DisplayName 'Varga Remote Power Agent (Tailscale)' -ErrorAc
 New-NetFirewallRule -DisplayName 'Varga Remote Power Agent (Tailscale)' -Direction Inbound `
     -Action Allow -Protocol TCP -LocalPort 47832 -RemoteAddress '100.64.0.0/10' -Profile Any | Out-Null
 & schtasks.exe /Run /TN $taskName | Out-Null
+
+if ($RefreshOnly) {
+    Write-Host 'Power Agent aggiornato e riavviato.' -ForegroundColor Green
+    exit 0
+}
 
 Write-Host ''
 Write-Host 'AGENTE INSTALLATO' -ForegroundColor Green

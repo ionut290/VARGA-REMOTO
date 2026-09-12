@@ -112,8 +112,8 @@ function Invoke-VargaWindowsPower {
     )
     $target = "\\$Computer"
     $arguments = switch ($Action) {
-        'shutdown' { @('/m', $target, '/s', '/t', $DelaySeconds, '/c', 'Spegnimento richiesto da Varga Remote') }
-        'restart'  { @('/m', $target, '/r', '/t', $DelaySeconds, '/c', 'Riavvio richiesto da Varga Remote') }
+        'shutdown' { @('/m', $target, '/s', '/t', $DelaySeconds, '/c', '"Spegnimento richiesto da Varga Remote"') }
+        'restart'  { @('/m', $target, '/r', '/t', $DelaySeconds, '/c', '"Riavvio richiesto da Varga Remote"') }
         'cancel'   { @('/m', $target, '/a') }
     }
     $process = Start-Process -FilePath "$env:SystemRoot\System32\shutdown.exe" -ArgumentList $arguments -Wait -PassThru -WindowStyle Hidden

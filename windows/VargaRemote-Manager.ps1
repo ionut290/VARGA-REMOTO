@@ -16,7 +16,7 @@ New-Item -Path $dataDir -ItemType Directory -Force | Out-Null
 $databasePath = Join-Path $PSScriptRoot 'router-database.json'
 $manifestPath = Join-Path $PSScriptRoot 'version.json'
 $updateScriptPath = Join-Path $PSScriptRoot 'Update-VargaRemote.ps1'
-$displayVersion = '0.7.1-beta'
+$displayVersion = '0.7.2-beta'
 if (Test-Path $manifestPath) {
     try { $displayVersion = [string](Get-Content $manifestPath -Raw | ConvertFrom-Json).version }
     catch { }

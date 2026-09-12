@@ -140,8 +140,27 @@ function Invoke-VargaExternalRequest {
     if (-not $baseUrl) { throw 'Servizio esterno non ancora configurato.' }
     $token = Unprotect-VargaExternalToken -ProtectedToken ([string]$Config.protectedToken)
     $headers = @{ Authorization = "Bearer $token" }
-    return Invoke-RestMethod -Uri "$baseUrl/$Endpoint" -Method Post -Headers $headers `
-        -ContentType 'application/json' -Body ($Body | ConvertTo-Json -Compress) -TimeoutSec 12
+    try {
+        return Invoke-RestMethod -Uri "$baseUrl/$Endpoint" -Method Post -Headers $headers `
+            -ContentType 'application/json' -Body ($Body | ConvertTo-Json -Compress) -TimeoutSec 12
+    }
+    catch {
+        $detail = ''
+        try {
+            $response = $_.Exception.Response
+            if ($response) {
+                $reader = New-Object IO.StreamReader($response.GetResponseStream())
+                try {
+                    $errorPayload = $reader.ReadToEnd() | ConvertFrom-Json
+                    $detail = [string]$errorPayload.error
+                }
+                finally { $reader.Dispose() }
+            }
+        }
+        catch { }
+        if ($detail) { throw "Power Agent: $detail" }
+        throw
+    }
 }
 
 function Invoke-VargaExternalWake {

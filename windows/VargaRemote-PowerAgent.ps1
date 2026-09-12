@@ -52,8 +52,8 @@ try {
             $action = [string]$body.action
             $delay = [Math]::Max(0, [Math]::Min(600, [int]$body.delaySeconds))
             $arguments = switch ($action) {
-                'shutdown' { @('/s', '/t', $delay, '/c', 'Spegnimento richiesto da Varga Remote') }
-                'restart'  { @('/r', '/t', $delay, '/c', 'Riavvio richiesto da Varga Remote') }
+                'shutdown' { @('/s', '/t', $delay, '/c', '"Spegnimento richiesto da Varga Remote"') }
+                'restart'  { @('/r', '/t', $delay, '/c', '"Riavvio richiesto da Varga Remote"') }
                 'cancel'   { @('/a') }
                 default { $null }
             }

@@ -103,6 +103,32 @@ try {
             }
         }
 
+        # Se il Power Agent e gia installato, aggiorna anche la copia eseguita
+        # come SYSTEM in ProgramData e riavvia l'attivita pianificata.
+        $powerAgentConfig = Join-Path $env:ProgramData 'VargaRemote\power-agent.json'
+        $installedPowerAgent = Join-Path $env:ProgramData 'VargaRemote\VargaRemote-PowerAgent.ps1'
+        $newPowerAgent = Join-Path $installRoot 'VargaRemote-PowerAgent.ps1'
+        if ((Test-Path $powerAgentConfig) -and (Test-Path $newPowerAgent)) {
+            $agentUpdated = $false
+            try {
+                Copy-Item -Path $newPowerAgent -Destination $installedPowerAgent -Force
+                & schtasks.exe /End /TN 'Varga Remote Power Agent' 2>$null | Out-Null
+                & schtasks.exe /Run /TN 'Varga Remote Power Agent' 2>$null | Out-Null
+                $agentUpdated = $true
+            }
+            catch { }
+            if (-not $agentUpdated -and -not $Silent) {
+                $agentInstaller = Join-Path $installRoot 'Install-VargaRemote-PowerAgent.ps1'
+                $agentProcess = Start-Process powershell.exe -Verb RunAs -PassThru -Wait -ArgumentList @(
+                    '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ('"{0}"' -f $agentInstaller),
+                    '-Automatic', '-RefreshOnly'
+                )
+                if ($agentProcess.ExitCode -ne 0) {
+                    throw 'Aggiornamento del Power Agent non completato.'
+                }
+            }
+        }
+
         $installMetadataPath = Join-Path $installRoot 'install.json'
         if (Test-Path $installMetadataPath) {
             try {
