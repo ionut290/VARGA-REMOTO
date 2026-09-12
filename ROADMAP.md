@@ -76,6 +76,13 @@ La configurazione deve restare esplicita: nessuna apertura di porte in backgroun
 - Power Agent Windows limitato a spegnimento, riavvio e annullamento;
 - configurazione per PC dal Manager e token cifrato localmente.
 
+## 0.7 - Configurazione automatica
+
+- installazione guidata Tailscale e Power Agent dal Manager;
+- pairing VRE1 dagli appunti senza compilare indirizzi e token;
+- rilevamento automatico del relay nella Tailnet;
+- indicazione separata delle funzioni realmente pronte.
+
 ## 1.0 - Piattaforma centralizzata
 
 - account e autenticazione a due fattori;

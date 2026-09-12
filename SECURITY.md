@@ -18,6 +18,9 @@
 6. Il token del PC di controllo viene cifrato con DPAPI per l'utente Windows. Sul
    relay e sul PC controllato deve essere leggibile soltanto da amministratori e
    account di servizio.
+7. Il codice automatico **VRE1** contiene il token segreto. Trasferirlo soltanto
+   fra i propri PC attraverso un canale affidabile e non pubblicarlo. Dopo
+   l'importazione il token viene conservato cifrato con DPAPI.
 5. La password permanente deve contenere almeno 12 caratteri alfanumerici.
 6. La revoca sostituisce la password con una credenziale casuale e non la
    conserva.

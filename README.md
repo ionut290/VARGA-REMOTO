@@ -1,10 +1,28 @@
-# Varga Remote 0.6.1 Accesso esterno + Smart Wake
+# Varga Remote 0.7.0 Configurazione automatica accesso esterno
 
 Varga Remote e un pannello Windows per controllare PC propri o autorizzati usando
 RustDesk come motore di desktop remoto. La versione 0.6 aggiunge **Accesso
 esterno sicuro** tramite Tailscale e Varga Relay; Smart Wake continua ad analizzare
 automaticamente PC, Ethernet e rete e sceglie il metodo di
 accensione piu sicuro che riesce realmente a verificare.
+
+## Novita della 0.7
+
+- un solo pulsante **CONFIGURA AUTOMATICAMENTE ACCESSO ESTERNO**;
+- scelta guidata tra **PREPARA QUESTO PC DA CONTROLLARE** e
+  **IMPORTA SUL PC DI CONTROLLO**;
+- installazione automatica di Tailscale tramite Windows Package Manager;
+- apertura automatica dell'accesso Tailscale nel browser e attesa della connessione;
+- installazione automatica del Power Agent, firewall e avvio automatico;
+- generazione di una configurazione `VRE1` copiata negli appunti;
+- importazione senza digitare indirizzo Power Agent o token;
+- ricerca automatica di Varga Relay fra i dispositivi Tailscale;
+- stato chiaro: spegnimento pronto oppure accesso completo con accensione.
+
+Sul PC da controllare premi il pulsante e scegli il punto 1. Sul PC di controllo
+seleziona quel computer, premi lo stesso pulsante e scegli il punto 2. L'unica
+operazione esterna richiesta e confermare l'amministratore e accedere a Tailscale
+nel browser.
 
 ## Novita della 0.6
 

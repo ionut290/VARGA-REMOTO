@@ -38,11 +38,12 @@ function Get-VargaExternalAccessConfig {
 function Save-VargaExternalAccessConfig {
     param(
         [Parameter(Mandatory)][string]$DeviceId,
-        [Parameter(Mandatory)][string]$RelayUrl,
-        [Parameter(Mandatory)][string]$PowerUrl,
+        [string]$RelayUrl = '',
+        [string]$PowerUrl = '',
         [Parameter(Mandatory)][string]$Token
     )
-    foreach ($value in @($RelayUrl, $PowerUrl)) {
+    if (-not $RelayUrl -and -not $PowerUrl) { throw 'Nessun servizio esterno rilevato.' }
+    foreach ($value in @($RelayUrl, $PowerUrl) | Where-Object { $_ }) {
         $uri = $null
         if (-not [Uri]::TryCreate($value, [UriKind]::Absolute, [ref]$uri) -or $uri.Scheme -ne 'http') {
             throw 'Gli indirizzi devono iniziare con http:// e usare un IP Tailscale 100.x.x.x.'
@@ -66,6 +67,68 @@ function Save-VargaExternalAccessConfig {
     @($entries) | ConvertTo-Json -Depth 5 | Set-Content $script:VargaExternalConfigPath -Encoding UTF8
 }
 
+function ConvertTo-VargaExternalPairingCode {
+    param(
+        [Parameter(Mandatory)][string]$PowerUrl,
+        [Parameter(Mandatory)][string]$Token
+    )
+    $payload = [PSCustomObject]@{
+        version = 1
+        powerUrl = $PowerUrl
+        token = $Token
+        createdAt = (Get-Date).ToUniversalTime().ToString('o')
+    }
+    $bytes = [Text.Encoding]::UTF8.GetBytes(($payload | ConvertTo-Json -Compress))
+    return 'VRE1:' + [Convert]::ToBase64String($bytes)
+}
+
+function ConvertFrom-VargaExternalPairingCode {
+    param([Parameter(Mandatory)][string]$Code)
+    $clean = $Code.Trim()
+    if (-not $clean.StartsWith('VRE1:')) { throw 'Negli appunti non c e una configurazione automatica Varga Remote.' }
+    try {
+        $json = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($clean.Substring(5)))
+        $payload = $json | ConvertFrom-Json
+    }
+    catch { throw 'Configurazione automatica danneggiata o non valida.' }
+    if ([int]$payload.version -ne 1 -or -not [string]$payload.powerUrl -or ([string]$payload.token).Length -lt 32) {
+        throw 'Configurazione automatica incompleta.'
+    }
+    return $payload
+}
+
+function Get-VargaTailscalePath {
+    return @(
+        "$env:ProgramFiles\Tailscale\tailscale.exe",
+        "${env:ProgramFiles(x86)}\Tailscale\tailscale.exe"
+    ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+}
+
+function Find-VargaRelay {
+    param([Parameter(Mandatory)][string]$Token)
+    $tailscale = Get-VargaTailscalePath
+    if (-not $tailscale) { return '' }
+    try { $status = (& $tailscale status --json 2>$null | Out-String) | ConvertFrom-Json }
+    catch { return '' }
+    $addresses = @()
+    if ($status.Peer) {
+        foreach ($peerProperty in $status.Peer.PSObject.Properties) {
+            $peer = $peerProperty.Value
+            $addresses += @($peer.TailscaleIPs | Where-Object { [string]$_ -match '^100\.' })
+        }
+    }
+    $headers = @{ Authorization = "Bearer $Token" }
+    foreach ($address in @($addresses | Select-Object -Unique)) {
+        $url = "http://${address}:47831"
+        try {
+            $health = Invoke-RestMethod -Uri "$url/health" -Headers $headers -TimeoutSec 2
+            if ($health.ok -and [string]$health.service -eq 'VargaRelay') { return $url }
+        }
+        catch { }
+    }
+    return ''
+}
+
 function Remove-VargaExternalAccessConfig {
     param([Parameter(Mandatory)][string]$DeviceId)
     $entries = @(Get-VargaExternalAccessEntries | Where-Object { [string]$_.deviceId -ne $DeviceId })
@@ -79,6 +142,7 @@ function Invoke-VargaExternalRequest {
         [Parameter(Mandatory)][hashtable]$Body
     )
     $baseUrl = if ($Endpoint -eq 'wake') { [string]$Config.relayUrl } else { [string]$Config.powerUrl }
+    if (-not $baseUrl) { throw 'Servizio esterno non ancora configurato.' }
     $token = Unprotect-VargaExternalToken -ProtectedToken ([string]$Config.protectedToken)
     $headers = @{ Authorization = "Bearer $token" }
     return Invoke-RestMethod -Uri "$baseUrl/$Endpoint" -Method Post -Headers $headers `

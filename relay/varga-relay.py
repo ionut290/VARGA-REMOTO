@@ -63,6 +63,21 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             return self._reply(500, {"ok": False, "error": "Invio Wake-on-LAN non riuscito."})
 
+    def do_GET(self):
+        try:
+            remote = ipaddress.ip_address(self.client_address[0])
+            tailnet = ipaddress.ip_network("100.64.0.0/10")
+            if not (remote.is_loopback or remote in tailnet):
+                return self._reply(403, {"ok": False, "error": "Rete non autorizzata."})
+        except ValueError:
+            return self._reply(403, {"ok": False, "error": "Rete non autorizzata."})
+        supplied = self.headers.get("Authorization", "")
+        if not TOKEN or not hmac.compare_digest(supplied, f"Bearer {TOKEN}"):
+            return self._reply(401, {"ok": False, "error": "Token non valido."})
+        if self.path != "/health":
+            return self._reply(404, {"ok": False, "error": "Comando non disponibile."})
+        return self._reply(200, {"ok": True, "service": "VargaRelay", "version": 1})
+
     def log_message(self, fmt, *args):
         print("%s - %s" % (self.address_string(), fmt % args), flush=True)
 

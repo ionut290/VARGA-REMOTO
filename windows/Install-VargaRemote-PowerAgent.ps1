@@ -1,6 +1,6 @@
 #requires -Version 5.1
 [CmdletBinding()]
-param()
+param([switch]$Automatic)
 
 $ErrorActionPreference = 'Stop'
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -9,15 +9,34 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
     throw 'Esegui questo file come amministratore sul PC da controllare.'
 }
 
-$tailscale = @(
+$tailscale = @(Get-Command tailscale.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -First 1)
+$tailscale += @(
     "$env:ProgramFiles\Tailscale\tailscale.exe",
     "${env:ProgramFiles(x86)}\Tailscale\tailscale.exe"
-) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+) | Where-Object { $_ -and (Test-Path $_) }
+$tailscale = $tailscale | Where-Object { $_ } | Select-Object -First 1
 if (-not $tailscale) {
-    throw 'Tailscale non trovato. Installalo e collegalo al tuo account, poi riesegui questo file.'
+    $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
+    if (-not $winget) { throw 'Installazione automatica Tailscale non disponibile: winget non trovato.' }
+    Write-Host 'Installazione automatica di Tailscale...' -ForegroundColor Cyan
+    & $winget.Source install --id Tailscale.Tailscale --exact --silent --accept-source-agreements --accept-package-agreements
+    $tailscale = @(
+        "$env:ProgramFiles\Tailscale\tailscale.exe",
+        "${env:ProgramFiles(x86)}\Tailscale\tailscale.exe"
+    ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+    if (-not $tailscale) { throw 'Tailscale non e stato installato correttamente.' }
 }
 $tailIp = (& $tailscale ip -4 2>$null | Select-Object -First 1).Trim()
-if ($tailIp -notmatch '^100\.') { throw 'Tailscale non e ancora collegato. Apri Tailscale, accedi e riprova.' }
+if ($tailIp -notmatch '^100\.') {
+    Write-Host 'Completa l accesso a Tailscale nella pagina che si apre...' -ForegroundColor Yellow
+    Start-Process -FilePath $tailscale -ArgumentList @('up')
+    $deadline = (Get-Date).AddMinutes(4)
+    do {
+        Start-Sleep -Seconds 2
+        $tailIp = (& $tailscale ip -4 2>$null | Select-Object -First 1).Trim()
+    } while ($tailIp -notmatch '^100\.' -and (Get-Date) -lt $deadline)
+}
+if ($tailIp -notmatch '^100\.') { throw 'Accesso Tailscale non completato entro quattro minuti. Riapri la configurazione automatica.' }
 
 $installRoot = Join-Path $env:ProgramData 'VargaRemote'
 $agentPath = Join-Path $installRoot 'VargaRemote-PowerAgent.ps1'
@@ -54,14 +73,20 @@ Write-Host 'AGENTE INSTALLATO' -ForegroundColor Green
 Write-Host "Indirizzo Power Agent: http://${tailIp}:47832"
 Write-Host "Token: $token"
 Write-Host 'Conserva il token in modo sicuro: serve sul PC di controllo.' -ForegroundColor Yellow
-$accessData = @(
-    "Indirizzo Power Agent: http://${tailIp}:47832",
-    "Token: $token"
-) -join [Environment]::NewLine
+$payload = [PSCustomObject]@{
+    version = 1
+    powerUrl = "http://${tailIp}:47832"
+    token = $token
+    createdAt = (Get-Date).ToUniversalTime().ToString('o')
+}
+$payloadBytes = [Text.Encoding]::UTF8.GetBytes(($payload | ConvertTo-Json -Compress))
+$accessData = 'VRE1:' + [Convert]::ToBase64String($payloadBytes)
 try {
     Set-Clipboard -Value $accessData
-    Write-Host 'Indirizzo e token copiati negli appunti.' -ForegroundColor Cyan
+    Write-Host 'Configurazione automatica copiata negli appunti.' -ForegroundColor Cyan
 }
 catch { }
 Write-Host ''
-[void](Read-Host 'Premi INVIO soltanto dopo aver copiato i dati')
+if (-not $Automatic) {
+    [void](Read-Host 'Premi INVIO soltanto dopo aver copiato i dati')
+}
