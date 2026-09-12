@@ -69,6 +69,13 @@ La configurazione deve restare esplicita: nessuna apertura di porte in backgroun
 - eventuale integrazione Intel AMT/vPro soltanto su hardware provisionato;
 - integrazione opzionale con un piccolo relay sempre acceso per router senza VPN.
 
+## 0.6 - Accesso esterno sicuro
+
+- Varga Relay Wake-on-LAN per reti con Vodafone Station o router senza VPN/WOL;
+- collegamento privato tramite Tailscale senza porte pubbliche;
+- Power Agent Windows limitato a spegnimento, riavvio e annullamento;
+- configurazione per PC dal Manager e token cifrato localmente.
+
 ## 1.0 - Piattaforma centralizzata
 
 - account e autenticazione a due fattori;

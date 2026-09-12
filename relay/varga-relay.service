@@ -1,0 +1,19 @@
+[Unit]
+Description=Varga Remote Wake-on-LAN Relay
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/varga-relay.env
+ExecStart=/usr/bin/python3 /opt/varga-relay/varga-relay.py
+Restart=on-failure
+RestartSec=5
+User=nobody
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

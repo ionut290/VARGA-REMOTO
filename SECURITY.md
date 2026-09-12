@@ -12,6 +12,12 @@
    tra dispositivi/personale autorizzato.
 4. Smart Wake non usa UPnP per creare port forwarding e non apre automaticamente
    UDP 7/9 sul router.
+5. Accesso Esterno 0.6 usa Tailscale e accetta soltanto indirizzi del Tailnet. Non
+   pubblicare le porte 47831/47832 su Internet e non creare port forwarding sulla
+   Vodafone Station.
+6. Il token del PC di controllo viene cifrato con DPAPI per l'utente Windows. Sul
+   relay e sul PC controllato deve essere leggibile soltanto da amministratori e
+   account di servizio.
 5. La password permanente deve contenere almeno 12 caratteri alfanumerici.
 6. La revoca sostituisce la password con una credenziale casuale e non la
    conserva.

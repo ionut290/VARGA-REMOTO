@@ -6,6 +6,8 @@ $powerToolsPath = Join-Path $PSScriptRoot 'PowerTools.ps1'
 if (Test-Path $powerToolsPath) { . $powerToolsPath }
 $smartWakePath = Join-Path $PSScriptRoot 'SmartWake.ps1'
 if (Test-Path $smartWakePath) { . $smartWakePath }
+$externalAccessPath = Join-Path $PSScriptRoot 'ExternalAccess.ps1'
+if (Test-Path $externalAccessPath) { . $externalAccessPath }
 
 [Windows.Forms.Application]::EnableVisualStyles()
 $dataDir = Join-Path $env:APPDATA 'VargaRemote'
@@ -14,7 +16,7 @@ New-Item -Path $dataDir -ItemType Directory -Force | Out-Null
 $databasePath = Join-Path $PSScriptRoot 'router-database.json'
 $manifestPath = Join-Path $PSScriptRoot 'version.json'
 $updateScriptPath = Join-Path $PSScriptRoot 'Update-VargaRemote.ps1'
-$displayVersion = '0.5.0-beta'
+$displayVersion = '0.6.0-beta'
 if (Test-Path $manifestPath) {
     try { $displayVersion = [string](Get-Content $manifestPath -Raw | ConvertFrom-Json).version }
     catch { }
@@ -54,8 +56,8 @@ if ($rustDeskPath) {
 
 $form = New-Object Windows.Forms.Form
 $form.Text = 'Varga Remote Manager - Smart Wake'
-$form.Size = New-Object Drawing.Size(920, 680)
-$form.MinimumSize = New-Object Drawing.Size(920, 680)
+$form.Size = New-Object Drawing.Size(920, 750)
+$form.MinimumSize = New-Object Drawing.Size(920, 750)
 $form.StartPosition = 'CenterScreen'
 $form.BackColor = [Drawing.Color]::FromArgb(15, 23, 42)
 $form.ForeColor = [Drawing.Color]::White
@@ -158,12 +160,14 @@ $restartButton = New-ActionButton 'RIAVVIA' 200 516 ([Drawing.Color]::FromArgb(1
 $shutdownButton = New-ActionButton 'SPEGNI' 372 516 ([Drawing.Color]::FromArgb(185, 28, 28))
 $cancelButton = New-ActionButton 'ANNULLA' 544 516 ([Drawing.Color]::FromArgb(51, 65, 85))
 $copyProfileButton = New-ActionButton 'COPIA PROFILO' 716 516 ([Drawing.Color]::FromArgb(6, 95, 70))
-$form.Controls.AddRange(@($add, $connect, $remove, $open, $networkButton, $wakeButton, $restartButton, $shutdownButton, $cancelButton, $copyProfileButton))
+$externalButton = New-ActionButton 'CONFIGURA ACCESSO ESTERNO' 28 570 ([Drawing.Color]::FromArgb(88, 28, 135))
+$externalButton.Width = 856
+$form.Controls.AddRange(@($add, $connect, $remove, $open, $networkButton, $wakeButton, $restartButton, $shutdownButton, $cancelButton, $copyProfileButton, $externalButton))
 
 $statusLabel = New-Object Windows.Forms.Label
 $statusLabel.Text = 'Smart Wake sceglie automaticamente il metodo migliore disponibile.'
 $statusLabel.ForeColor = [Drawing.Color]::FromArgb(148, 163, 184)
-$statusLabel.Location = New-Object Drawing.Point(28, 574)
+$statusLabel.Location = New-Object Drawing.Point(28, 626)
 $statusLabel.Size = New-Object Drawing.Size(850, 34)
 $statusLabel.Anchor = 'Bottom,Left,Right'
 $form.Controls.Add($statusLabel)
@@ -392,6 +396,20 @@ $wakeButton.Add_Click({
     $device = Get-SelectedDevice
     if (-not $device) { return }
     try {
+        $externalConfig = $null
+        if (Get-Command Get-VargaExternalAccessConfig -ErrorAction SilentlyContinue) {
+            $externalConfig = Get-VargaExternalAccessConfig -DeviceId (Get-DeviceValue $device 'id')
+        }
+        if ($externalConfig) {
+            $mac = Get-DeviceValue $device 'mac'
+            if (-not $mac) { throw 'MAC Ethernet mancante.' }
+            $result = Invoke-VargaExternalWake -Config $externalConfig -MacAddress $mac
+            $statusLabel.Text = 'ACCENDI: comando inviato tramite Varga Relay e Tailscale.'
+            [Windows.Forms.MessageBox]::Show(
+                'Comando di accensione inviato al Varga Relay nella rete del PC.',
+                'ACCENDI DA INTERNET', 'OK', 'Information') | Out-Null
+            return
+        }
         if (Get-Command Invoke-VargaSmartWake -ErrorAction SilentlyContinue) {
             $result = Invoke-VargaSmartWake -Device $device
             if ($result.Sent) {
@@ -420,11 +438,6 @@ $wakeButton.Add_Click({
 function Invoke-PowerButton([string]$action, [string]$label) {
     $device = Get-SelectedDevice
     if (-not $device) { return }
-    $hostName = Get-DeviceValue $device 'host'
-    if (-not $hostName) {
-        [Windows.Forms.MessageBox]::Show('Modifica o reinserisci il PC indicando IP o nome Windows.', $label) | Out-Null
-        return
-    }
     if ($action -ne 'cancel') {
         $answer = [Windows.Forms.MessageBox]::Show(
             "$label il PC $((Get-DeviceValue $device 'name'))? Il comando partira tra 60 secondi.",
@@ -432,6 +445,17 @@ function Invoke-PowerButton([string]$action, [string]$label) {
         if ($answer -ne 'Yes') { return }
     }
     try {
+        $externalConfig = $null
+        if (Get-Command Get-VargaExternalAccessConfig -ErrorAction SilentlyContinue) {
+            $externalConfig = Get-VargaExternalAccessConfig -DeviceId (Get-DeviceValue $device 'id')
+        }
+        if ($externalConfig) {
+            Invoke-VargaExternalPower -Config $externalConfig -Action $action -DelaySeconds 60 | Out-Null
+            [Windows.Forms.MessageBox]::Show("Comando $label inviato tramite Tailscale.", 'Varga Remote') | Out-Null
+            return
+        }
+        $hostName = Get-DeviceValue $device 'host'
+        if (-not $hostName) { throw 'Configura ACCESSO ESTERNO oppure indica IP/nome Windows del PC.' }
         Invoke-VargaWindowsPower -Action $action -Computer $hostName -DelaySeconds 60
         [Windows.Forms.MessageBox]::Show("Comando $label inviato.", 'Varga Remote') | Out-Null
     }
@@ -441,6 +465,95 @@ function Invoke-PowerButton([string]$action, [string]$label) {
 $shutdownButton.Add_Click({ Invoke-PowerButton 'shutdown' 'SPEGNI' })
 $restartButton.Add_Click({ Invoke-PowerButton 'restart' 'RIAVVIA' })
 $cancelButton.Add_Click({ Invoke-PowerButton 'cancel' 'ANNULLA' })
+
+$externalButton.Add_Click({
+    $device = Get-SelectedDevice
+    if (-not $device) { return }
+    if (-not (Get-Command Save-VargaExternalAccessConfig -ErrorAction SilentlyContinue)) {
+        [Windows.Forms.MessageBox]::Show('Modulo Accesso Esterno non disponibile.', 'Varga Remote', 'OK', 'Error') | Out-Null
+        return
+    }
+
+    $deviceId = Get-DeviceValue $device 'id'
+    $existing = Get-VargaExternalAccessConfig -DeviceId $deviceId
+    $dialog = New-Object Windows.Forms.Form
+    $dialog.Text = 'Configura accesso esterno sicuro'
+    $dialog.Size = New-Object Drawing.Size(570, 430)
+    $dialog.StartPosition = 'CenterParent'
+    $dialog.Font = New-Object Drawing.Font('Segoe UI', 10)
+
+    $intro = New-Object Windows.Forms.Label
+    $intro.Text = "PC: $((Get-DeviceValue $device 'name'))`r`nUsa esclusivamente gli indirizzi Tailscale 100.x.x.x. Nessuna porta va aperta sulla Vodafone Station."
+    $intro.Location = New-Object Drawing.Point(20, 18)
+    $intro.Size = New-Object Drawing.Size(515, 52)
+
+    $relayLabel = New-Object Windows.Forms.Label
+    $relayLabel.Text = 'Indirizzo Varga Relay (es. http://100.x.x.x:47831)'
+    $relayLabel.Location = New-Object Drawing.Point(20, 82)
+    $relayLabel.AutoSize = $true
+    $relayBox = New-Object Windows.Forms.TextBox
+    $relayBox.Location = New-Object Drawing.Point(20, 108)
+    $relayBox.Width = 515
+
+    $powerLabel = New-Object Windows.Forms.Label
+    $powerLabel.Text = 'Indirizzo Power Agent (es. http://100.x.x.x:47832)'
+    $powerLabel.Location = New-Object Drawing.Point(20, 145)
+    $powerLabel.AutoSize = $true
+    $powerBox = New-Object Windows.Forms.TextBox
+    $powerBox.Location = New-Object Drawing.Point(20, 171)
+    $powerBox.Width = 515
+
+    $tokenLabel = New-Object Windows.Forms.Label
+    $tokenLabel.Text = 'Token segreto condiviso'
+    $tokenLabel.Location = New-Object Drawing.Point(20, 208)
+    $tokenLabel.AutoSize = $true
+    $tokenBox = New-Object Windows.Forms.TextBox
+    $tokenBox.Location = New-Object Drawing.Point(20, 234)
+    $tokenBox.Width = 515
+    $tokenBox.UseSystemPasswordChar = $true
+
+    if ($existing) {
+        $relayBox.Text = [string]$existing.relayUrl
+        $powerBox.Text = [string]$existing.powerUrl
+        try { $tokenBox.Text = Unprotect-VargaExternalToken -ProtectedToken ([string]$existing.protectedToken) } catch { }
+    }
+
+    $removeExternal = New-Object Windows.Forms.Button
+    $removeExternal.Text = 'DISATTIVA'
+    $removeExternal.Location = New-Object Drawing.Point(20, 302)
+    $removeExternal.Size = New-Object Drawing.Size(130, 38)
+    $removeExternal.BackColor = [Drawing.Color]::FromArgb(185, 28, 28)
+    $removeExternal.ForeColor = [Drawing.Color]::White
+    $removeExternal.FlatStyle = 'Flat'
+
+    $saveExternal = New-Object Windows.Forms.Button
+    $saveExternal.Text = 'SALVA'
+    $saveExternal.Location = New-Object Drawing.Point(405, 302)
+    $saveExternal.Size = New-Object Drawing.Size(130, 38)
+    $saveExternal.BackColor = [Drawing.Color]::FromArgb(21, 128, 61)
+    $saveExternal.ForeColor = [Drawing.Color]::White
+    $saveExternal.FlatStyle = 'Flat'
+
+    $removeExternal.Add_Click({
+        Remove-VargaExternalAccessConfig -DeviceId $deviceId
+        $dialog.DialogResult = [Windows.Forms.DialogResult]::Cancel
+        $dialog.Close()
+    })
+    $saveExternal.Add_Click({
+        try {
+            Save-VargaExternalAccessConfig -DeviceId $deviceId -RelayUrl $relayBox.Text.Trim() `
+                -PowerUrl $powerBox.Text.Trim() -Token $tokenBox.Text
+            $dialog.DialogResult = [Windows.Forms.DialogResult]::OK
+            $dialog.Close()
+        }
+        catch { [Windows.Forms.MessageBox]::Show($_.Exception.Message, 'Accesso esterno', 'OK', 'Error') | Out-Null }
+    })
+    $dialog.Controls.AddRange(@($intro, $relayLabel, $relayBox, $powerLabel, $powerBox, $tokenLabel, $tokenBox, $removeExternal, $saveExternal))
+    if ($dialog.ShowDialog($form) -eq [Windows.Forms.DialogResult]::OK) {
+        $statusLabel.Text = 'Accesso esterno configurato tramite Tailscale.'
+        [Windows.Forms.MessageBox]::Show('Configurazione salvata. Il token e cifrato per questo utente Windows.', 'Accesso esterno', 'OK', 'Information') | Out-Null
+    }
+})
 
 $updateButton.Add_Click({
     if (-not (Test-Path $updateScriptPath)) {

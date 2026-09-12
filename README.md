@@ -1,7 +1,41 @@
-# Varga Remote 0.5.0 Smart Wake + Aggiornamenti automatici
+# Varga Remote 0.6.0 Accesso esterno + Smart Wake
 
 Varga Remote e un pannello Windows per controllare PC propri o autorizzati usando
-RustDesk come motore di desktop remoto. La versione 0.4 aggiunge **Smart Wake**:
+RustDesk come motore di desktop remoto. La versione 0.6 aggiunge **Accesso
+esterno sicuro** tramite Tailscale e Varga Relay; Smart Wake continua ad analizzare
+automaticamente PC, Ethernet e rete e sceglie il metodo di
+accensione piu sicuro che riesce realmente a verificare.
+
+## Novita della 0.6
+
+- pulsante **CONFIGURA ACCESSO ESTERNO** per ogni PC autorizzato;
+- accensione da Internet tramite un piccolo Varga Relay sempre acceso nella LAN;
+- spegnimento, riavvio e annullamento tramite Power Agent Windows;
+- comunicazioni instradate nella rete cifrata Tailscale;
+- nessuna porta pubblica aperta sulla Vodafone Station;
+- token lungo obbligatorio, protetto con DPAPI sul PC di controllo;
+- agente limitato agli indirizzi Tailscale `100.64.0.0/10`;
+- conferma e ritardo di 60 secondi mantenuti per spegnimento e riavvio.
+
+RustDesk resta il motore per vedere e controllare lo schermo. Varga Relay gestisce
+solo il Magic Packet di accensione; il Power Agent accetta solo i tre comandi di
+alimentazione previsti e non offre un terminale remoto.
+
+### Preparazione del PC controllato
+
+1. Installare Tailscale sul PC controllato e sul PC di controllo, usando lo stesso
+   account/Tailnet.
+2. Sul PC controllato eseguire come amministratore
+   `windows/Installa-agente-accesso-esterno.cmd`.
+3. Conservare l'indirizzo `http://100.x.x.x:47832` e il token mostrati.
+4. Preparare Varga Relay seguendo `relay/INSTALLAZIONE.md`.
+5. Sul PC di controllo selezionare il PC in Varga Remote, premere
+   **CONFIGURA ACCESSO ESTERNO** e inserire i due indirizzi e il token.
+
+Per l'accensione il PC controllato deve essere collegato via Ethernet e Wake-on-LAN
+deve essere abilitato nel BIOS/UEFI e nella scheda di rete.
+
+La versione 0.4 ha aggiunto **Smart Wake**:
 l'app analizza automaticamente PC, Ethernet e rete e sceglie il metodo di
 accensione piu sicuro che riesce realmente a verificare.
 
