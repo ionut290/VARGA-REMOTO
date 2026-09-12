@@ -65,12 +65,16 @@ function Save-VargaExternalAccessConfig {
 function ConvertTo-VargaExternalPairingCode {
     param(
         [Parameter(Mandatory)][string]$PowerUrl,
-        [Parameter(Mandatory)][string]$Token
+        [Parameter(Mandatory)][string]$Token,
+        [string]$ComputerName = $env:COMPUTERNAME,
+        [string]$RustDeskId = ''
     )
     $payload = [PSCustomObject]@{
-        version = 1
+        version = 2
         powerUrl = $PowerUrl
         token = $Token
+        computerName = $ComputerName
+        rustDeskId = $RustDeskId
         createdAt = (Get-Date).ToUniversalTime().ToString('o')
     }
     $bytes = [Text.Encoding]::UTF8.GetBytes(($payload | ConvertTo-Json -Compress))
@@ -86,7 +90,7 @@ function ConvertFrom-VargaExternalPairingCode {
         $payload = $json | ConvertFrom-Json
     }
     catch { throw 'Configurazione automatica danneggiata o non valida.' }
-    if ([int]$payload.version -ne 1 -or -not [string]$payload.powerUrl -or ([string]$payload.token).Length -lt 32) {
+    if ([int]$payload.version -notin @(1, 2) -or -not [string]$payload.powerUrl -or ([string]$payload.token).Length -lt 32) {
         throw 'Configurazione automatica incompleta.'
     }
     return $payload
@@ -138,6 +142,16 @@ function Invoke-VargaExternalRequest {
     )
     $baseUrl = if ($Endpoint -eq 'wake') { [string]$Config.relayUrl } else { [string]$Config.powerUrl }
     if (-not $baseUrl) { throw 'Servizio esterno non ancora configurato.' }
+    if ($Endpoint -eq 'power') {
+        $targetUri = [Uri]$baseUrl
+        $tailscale = Get-VargaTailscalePath
+        if ($tailscale) {
+            $localTailIps = @(& $tailscale ip -4 2>$null | ForEach-Object { ([string]$_).Trim() })
+            if ($localTailIps -contains $targetUri.Host) {
+                throw 'BLOCCATO: questo indirizzo appartiene al PC che stai usando. Prepara e importa la configurazione dal PC remoto, non da questo PC.'
+            }
+        }
+    }
     $token = Unprotect-VargaExternalToken -ProtectedToken ([string]$Config.protectedToken)
     $headers = @{ Authorization = "Bearer $token" }
     try {

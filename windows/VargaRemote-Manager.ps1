@@ -16,7 +16,7 @@ New-Item -Path $dataDir -ItemType Directory -Force | Out-Null
 $databasePath = Join-Path $PSScriptRoot 'router-database.json'
 $manifestPath = Join-Path $PSScriptRoot 'version.json'
 $updateScriptPath = Join-Path $PSScriptRoot 'Update-VargaRemote.ps1'
-$displayVersion = '0.7.4-beta'
+$displayVersion = '0.7.5-beta'
 if (Test-Path $manifestPath) {
     try { $displayVersion = [string](Get-Content $manifestPath -Raw | ConvertFrom-Json).version }
     catch { }
@@ -478,12 +478,12 @@ $externalButton.Add_Click({
     $dialog.Font = New-Object Drawing.Font('Segoe UI', 10)
 
     $intro = New-Object Windows.Forms.Label
-    $intro.Text = "Scegli il ruolo di questo computer. Varga Remote installa Tailscale e il Power Agent, genera il token, rileva gli indirizzi e compila la configurazione.`r`nNessuna porta verra aperta sulla Vodafone Station."
+    $intro.Text = "ATTENZIONE: il punto 1 va eseguito soltanto sul PC REMOTO che vuoi comandare.`r`nQuesto PC: $env:COMPUTERNAME - RustDesk: $localId`r`nNessuna porta verra aperta sulla Vodafone Station."
     $intro.Location = New-Object Drawing.Point(20, 18)
     $intro.Size = New-Object Drawing.Size(555, 72)
 
     $prepareButton = New-Object Windows.Forms.Button
-    $prepareButton.Text = '1. PREPARA QUESTO PC DA CONTROLLARE'
+    $prepareButton.Text = '1. PREPARA QUESTO PC REMOTO DA CONTROLLARE'
     $prepareButton.Location = New-Object Drawing.Point(20, 105)
     $prepareButton.Size = New-Object Drawing.Size(555, 58)
     $prepareButton.BackColor = [Drawing.Color]::FromArgb(21, 128, 61)
@@ -531,6 +531,18 @@ $externalButton.Add_Click({
             if (-not $device) { return }
             if (-not [Windows.Forms.Clipboard]::ContainsText()) { throw 'Appunti vuoti. Esegui prima PREPARA sul PC da controllare.' }
             $payload = ConvertFrom-VargaExternalPairingCode -Code ([Windows.Forms.Clipboard]::GetText())
+            $pairedRustDeskId = [string](Get-VargaObjectValue $payload 'rustDeskId' '')
+            if ($pairedRustDeskId -and -not $pairedRustDeskId.Equals((Get-DeviceValue $device 'id'), [StringComparison]::OrdinalIgnoreCase)) {
+                throw "Configurazione del PC sbagliato. Hai selezionato $((Get-DeviceValue $device 'name')) (ID $((Get-DeviceValue $device 'id'))), ma i dati appartengono al PC $([string](Get-VargaObjectValue $payload 'computerName' '')) (ID $pairedRustDeskId)."
+            }
+            $powerUri = [Uri]([string]$payload.powerUrl)
+            $tailscale = Get-VargaTailscalePath
+            if ($tailscale) {
+                $localTailIps = @(& $tailscale ip -4 2>$null | ForEach-Object { ([string]$_).Trim() })
+                if ($localTailIps -contains $powerUri.Host) {
+                    throw 'Hai preparato il PC di controllo. Collegati prima al PC remoto con RustDesk ed esegui li il punto 1.'
+                }
+            }
             $wizardStatus.Text = 'Configurazione letta. Ricerca automatica di Varga Relay nella rete Tailscale...'
             [Windows.Forms.Application]::DoEvents()
             $relayUrl = Find-VargaRelay -Token ([string]$payload.token)

@@ -3,6 +3,8 @@
 param([switch]$Automatic, [switch]$RefreshOnly)
 
 $ErrorActionPreference = 'Stop'
+$commonPath = Join-Path $PSScriptRoot 'Common.ps1'
+if (Test-Path $commonPath) { . $commonPath }
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $principal = New-Object Security.Principal.WindowsPrincipal($identity)
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
@@ -79,10 +81,16 @@ Write-Host "Indirizzo Power Agent: http://${tailIp}:47832"
 Write-Host "Token: $token"
 Write-Host 'Conserva il token in modo sicuro: serve sul PC di controllo.' -ForegroundColor Yellow
 $payload = [PSCustomObject]@{
-    version = 1
+    version = 2
     powerUrl = "http://${tailIp}:47832"
     token = $token
+    computerName = $env:COMPUTERNAME
+    rustDeskId = ''
     createdAt = (Get-Date).ToUniversalTime().ToString('o')
+}
+if (Get-Command Get-VargaRemoteRustDeskPath -ErrorAction SilentlyContinue) {
+    $rustDesk = Get-VargaRemoteRustDeskPath
+    if ($rustDesk) { $payload.rustDeskId = (& $rustDesk --get-id 2>$null | Out-String).Trim() }
 }
 $payloadBytes = [Text.Encoding]::UTF8.GetBytes(($payload | ConvertTo-Json -Compress))
 $accessData = 'VRE1:' + [Convert]::ToBase64String($payloadBytes)
