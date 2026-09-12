@@ -1,7 +1,7 @@
 {
   "app": "Varga Remote",
-  "version": "0.7.0-beta",
-  "versionNumber": "0.7.0",
+  "version": "0.7.1-beta",
+  "versionNumber": "0.7.1",
   "channel": "beta",
   "repository": "ionut290/VARGA-REMOTO",
   "minimumPowerShell": "5.1",

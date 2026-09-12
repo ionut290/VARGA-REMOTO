@@ -16,7 +16,7 @@ New-Item -Path $dataDir -ItemType Directory -Force | Out-Null
 $databasePath = Join-Path $PSScriptRoot 'router-database.json'
 $manifestPath = Join-Path $PSScriptRoot 'version.json'
 $updateScriptPath = Join-Path $PSScriptRoot 'Update-VargaRemote.ps1'
-$displayVersion = '0.7.0-beta'
+$displayVersion = '0.7.1-beta'
 if (Test-Path $manifestPath) {
     try { $displayVersion = [string](Get-Content $manifestPath -Raw | ConvertFrom-Json).version }
     catch { }
@@ -74,7 +74,7 @@ $form.Controls.Add($title)
 $versionLabel = New-Object Windows.Forms.Label
 $versionLabel.Text = "SMART WAKE $displayVersion"
 $versionLabel.ForeColor = [Drawing.Color]::FromArgb(94, 234, 212)
-$versionLabel.Location = New-Object Drawing.Point(220, 34)
+$versionLabel.Location = New-Object Drawing.Point(235, 34)
 $versionLabel.AutoSize = $true
 $form.Controls.Add($versionLabel)
 

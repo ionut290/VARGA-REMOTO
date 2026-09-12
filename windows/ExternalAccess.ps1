@@ -2,24 +2,19 @@
 Set-StrictMode -Version Latest
 
 $script:VargaExternalConfigPath = Join-Path (Join-Path $env:APPDATA 'VargaRemote') 'external-access.json'
-$script:VargaExternalEntropy = [Text.Encoding]::UTF8.GetBytes('VargaRemote.ExternalAccess.v1')
 
 function Protect-VargaExternalToken {
     param([Parameter(Mandatory)][string]$Token)
-    $plain = [Text.Encoding]::UTF8.GetBytes($Token)
-    $protected = [Security.Cryptography.ProtectedData]::Protect(
-        $plain, $script:VargaExternalEntropy,
-        [Security.Cryptography.DataProtectionScope]::CurrentUser)
-    return [Convert]::ToBase64String($protected)
+    $secure = ConvertTo-SecureString -String $Token -AsPlainText -Force
+    return ConvertFrom-SecureString -SecureString $secure
 }
 
 function Unprotect-VargaExternalToken {
     param([Parameter(Mandatory)][string]$ProtectedToken)
-    $protected = [Convert]::FromBase64String($ProtectedToken)
-    $plain = [Security.Cryptography.ProtectedData]::Unprotect(
-        $protected, $script:VargaExternalEntropy,
-        [Security.Cryptography.DataProtectionScope]::CurrentUser)
-    return [Text.Encoding]::UTF8.GetString($plain)
+    $secure = ConvertTo-SecureString -String $ProtectedToken
+    $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+    try { return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer) }
+    finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer) }
 }
 
 function Get-VargaExternalAccessEntries {
