@@ -236,7 +236,7 @@ function Install-VargaRemoteFiles {
 
     $metadata = [PSCustomObject]@{
         app = 'Varga Remote'
-        version = '0.8.0-beta'
+        version = '0.8.1-beta'
         computerName = $ComputerLabel
         windowsName = $env:COMPUTERNAME
         rustDeskId = $RustDeskId

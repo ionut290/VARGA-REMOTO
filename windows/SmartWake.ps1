@@ -461,6 +461,19 @@ function Enable-VargaEthernetWake {
     }
     catch { $messages += 'Windows non ha consentito la modifica Wake on Magic Packet.' }
 
+    # Alcuni driver espongono l'opzione soltanto come proprieta avanzata NDIS.
+    try {
+        $magicProperties = @(Get-NetAdapterAdvancedProperty -Name $adapter.Name -ErrorAction SilentlyContinue |
+            Where-Object { [string]$_.RegistryKeyword -eq '*WakeOnMagicPacket' })
+        foreach ($property in $magicProperties) {
+            Set-NetAdapterAdvancedProperty -Name $adapter.Name -RegistryKeyword $property.RegistryKeyword `
+                -RegistryValue 1 -NoRestart -ErrorAction Stop
+            $messages += 'Proprieta avanzata Wake on Magic Packet abilitata.'
+            $changed = $true
+        }
+    }
+    catch { $messages += 'Il driver Ethernet non permette la modifica avanzata automatica.' }
+
     try {
         & powercfg.exe /deviceenablewake ([string]$adapter.InterfaceDescription) 2>$null | Out-Null
         if ($LASTEXITCODE -eq 0) {

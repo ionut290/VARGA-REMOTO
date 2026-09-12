@@ -5,10 +5,19 @@ param([switch]$Automatic, [switch]$RefreshOnly)
 $ErrorActionPreference = 'Stop'
 $commonPath = Join-Path $PSScriptRoot 'Common.ps1'
 if (Test-Path $commonPath) { . $commonPath }
+$powerToolsPath = Join-Path $PSScriptRoot 'PowerTools.ps1'
+if (Test-Path $powerToolsPath) { . $powerToolsPath }
+$smartWakePath = Join-Path $PSScriptRoot 'SmartWake.ps1'
+if (Test-Path $smartWakePath) { . $smartWakePath }
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $principal = New-Object Security.Principal.WindowsPrincipal($identity)
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     throw 'Esegui questo file come amministratore sul PC da controllare.'
+}
+
+if (Get-Command Enable-VargaEthernetWake -ErrorAction SilentlyContinue) {
+    $wakeOptimization = Enable-VargaEthernetWake
+    Write-Host ([string]$wakeOptimization.Message) -ForegroundColor Cyan
 }
 
 $tailscale = @(Get-Command tailscale.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -First 1)
