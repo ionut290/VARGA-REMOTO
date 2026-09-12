@@ -16,7 +16,7 @@ New-Item -Path $dataDir -ItemType Directory -Force | Out-Null
 $databasePath = Join-Path $PSScriptRoot 'router-database.json'
 $manifestPath = Join-Path $PSScriptRoot 'version.json'
 $updateScriptPath = Join-Path $PSScriptRoot 'Update-VargaRemote.ps1'
-$displayVersion = '0.7.3-beta'
+$displayVersion = '0.7.4-beta'
 if (Test-Path $manifestPath) {
     try { $displayVersion = [string](Get-Content $manifestPath -Raw | ConvertFrom-Json).version }
     catch { }
@@ -561,7 +561,7 @@ $updateButton.Add_Click({
         [Windows.Forms.MessageBox]::Show('Modulo di aggiornamento non disponibile.', 'Varga Remote', 'OK', 'Error') | Out-Null
         return
     }
-    Start-Process powershell.exe -ArgumentList @(
+    Start-Process powershell.exe -Verb RunAs -ArgumentList @(
         '-NoProfile', '-ExecutionPolicy', 'Bypass', '-STA', '-File', ('"{0}"' -f $updateScriptPath), '-Force'
     )
 })
